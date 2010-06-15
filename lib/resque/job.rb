@@ -50,6 +50,22 @@ module Resque
 
       Resque.push(queue, :class => klass.to_s, :args => args)
     end
+    
+    def self.create_timestamped(queue, klass, time, *args)
+      if !queue
+        raise NoQueueError.new("Jobs must be placed onto a queue.")
+      end
+
+      if klass.to_s.empty?
+        raise NoClassError.new("Jobs must be given a class.")
+      end
+      
+      if !time
+        raise NoTimeError.new('Timed Jobs must be given a time')
+      end
+
+      Resque.push(queue, :class => klass.to_s, :args => args, :timestamp => time)
+    end
 
     # Removes a job from a queue. Expects a string queue name, a
     # string class name, and, optionally, args.
@@ -79,15 +95,25 @@ module Resque
       klass = klass.to_s
       queue = "queue:#{queue}"
       destroyed = 0
-
-      redis.lrange(queue, 0, -1).each do |string|
+      
+      if queue_is_timestamped?(queue)
+        jobs = redis.zrangebyscore(queue, 0, Time.now.to_i)
+      else
+        jobs = redis.lrange(queue, 0, -1)
+      end
+      
+      jobs.each do |string|
         json   = decode(string)
 
         match  = json['class'] == klass
         match &= json['args'] == args unless args.empty?
 
         if match
-          destroyed += redis.lrem(queue, 0, string).to_i
+          if queue_is_timestamped?(queue)
+            destroyed += redis.zrem(queue, string).to_i
+          else
+            destroyed += redis.lrem(queue, 0, string).to_i
+          end
         end
       end
 

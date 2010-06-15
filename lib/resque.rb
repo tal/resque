@@ -118,20 +118,36 @@ module Resque
   # item should be any JSON-able Ruby object.
   def push(queue, item)
     watch_queue(queue)
-    redis.rpush "queue:#{queue}", encode(item)
+    queue = "queue:#{queue}"
+    
+    if queue_is_timestamped?(queue)
+      raise NoTimeError.new('Time is required to push to a timestamped queue') unless item[:timestamp]
+      redis.zadd queue, item[:timestamp].to_i, encode(item)
+    else
+      redis.rpush queue, encode(item)
+    end
   end
 
   # Pops a job off a queue. Queue name should be a string.
   #
   # Returns a Ruby object.
   def pop(queue)
-    decode redis.lpop("queue:#{queue}")
+    queue = "queue:#{queue}"
+    if queue_is_timestamped?(queue)
+      decode redis.zrangebyscore queue, 0, Time.now.to_i, :limit => [0,1]
+    else
+      decode redis.lpop(queue)
+    end
   end
 
   # Returns an integer representing the size of a queue.
   # Queue name should be a string.
   def size(queue)
-    redis.llen("queue:#{queue}").to_i
+    if queue_is_timestamped?(queue)
+      redis.zcard("queue:#{queue}").to_i
+    else
+      redis.llen("queue:#{queue}").to_i
+    end
   end
 
   # Returns an array of items currently queued. Queue name should be
@@ -149,13 +165,18 @@ module Resque
   # Does the dirty work of fetching a range of items from a Redis list
   # and converting them into Ruby objects.
   def list_range(key, start = 0, count = 1)
-    if count == 1
-      decode redis.lindex(key, start)
+    if queue_is_timestamped?(key)
+      items = redis.zrange(key,start,count).collect {|item| decode(item)}
+      count == 1 ? items.first : items
     else
-      Array(redis.lrange(key, start, start+count-1)).map do |item|
-        decode item
+      if count == 1
+        decode redis.lindex(key, start)
+      else
+        Array(redis.lrange(key, start, start+count-1)).map do |item|
+          decode item
+        end
       end
-    end
+    end # /queue_is_timestamped?(queue)
   end
 
   # Returns an array of all known Resque queues as strings.
@@ -195,6 +216,10 @@ module Resque
   # This method is considered part of the `stable` API.
   def enqueue(klass, *args)
     Job.create(queue_from_class(klass), klass, *args)
+  end
+  
+  def run_at(klass, time, *args)
+    Job.create_timestamped(queue_from_class(klass), klass, time, *args)
   end
 
   # This method can be used to conveniently remove a job from a queue.
