@@ -121,7 +121,7 @@ module Resque
     queue = "queue:#{queue}"
     if queue_is_timestamped?(queue)
       raise NoTimeError.new('Time is required to push to a timestamped queue') unless item[:run_at]
-      redis.zadd queue, item.delete(:run_at).to_i, encode(item)
+      redis.zadd queue, item[:run_at].to_i, encode(item) # run_at is included in the encoded item to make members uniq
     else
       redis.rpush queue, encode(item)
     end
@@ -173,9 +173,9 @@ module Resque
   def list_range(key, start = 0, count = 1)
     if queue_is_timestamped?(key)
       items = []
-      redis.zrange(key,start,start+count-1,:with_scores => true).each_slice(2) do |item|
-        i = decode(item[0])
-        i['run_at'] = Time.at(item[1].to_i)
+      redis.zrange(key,start,start+count-1).collect do |item|
+        i = decode(item)
+        i['run_at'] = Time.at(i['run_at'].to_i) if i['run_at']
         items << i
       end
       count == 1 ? items.first : items
