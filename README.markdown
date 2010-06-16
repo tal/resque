@@ -169,6 +169,18 @@ directory for goodies.
 We plan to provide first class `async` support in a future release.
 
 
+### Timed jobs
+
+Want to have a job run at a specific time? Instead of using `Resque.enqueue` do
+this:
+
+    Resque.run_at(Time.now+20.minutes, Archive, self.id, branch)
+
+You'll also have to make sure that you're using a special queue for
+timed jobs. These queues are defined the exact same way as normal queues
+but must have **__ts** as a suffix. Eg. `:file_serve__ts`. (note the TWO
+underscores)
+
 ### Failure
 
 If a job raises an exception, it is logged and handed off to the
