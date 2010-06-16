@@ -133,11 +133,8 @@ module Resque
   def pop(queue)
     queue = "queue:#{queue}"
     if queue_is_timestamped?(queue)
-      item = redis.zrangebyscore(queue, 0, Time.now.to_i, :limit => [0,1])
-      if item
-        item = item.first
-        redis.zrem(queue,item)
-      end
+      item = redis.zrangebyscore(queue, 0, Time.now.to_i, :limit => [0,1]).first
+      redis.zrem(queue,item) if item
       decode item
     else
       decode redis.lpop(queue)
