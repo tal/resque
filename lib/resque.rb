@@ -121,7 +121,8 @@ module Resque
     queue = "queue:#{queue}"
     if queue_is_timestamped?(queue)
       raise NoTimeError.new('Time is required to push to a timestamped queue') unless item[:run_at]
-      redis.zadd queue, item[:run_at].to_i, encode(item) # run_at is included in the encoded item to make members uniq
+      item[:run_at] = item[:run_at].to_i
+      redis.zadd queue, item[:run_at], encode(item) # run_at is included in the encoded item to make members uniq
     else
       redis.rpush queue, encode(item)
     end
