@@ -38,9 +38,9 @@ at_exit do
   exit exit_code
 end
 
-puts "Starting redis for testing at localhost:9736..."
-`redis-server #{dir}/redis-test.conf`
-Resque.redis = 'localhost:9736'
+# puts "Starting redis for testing at localhost:9736..."
+# `redis-server #{dir}/redis-test.conf`
+# Resque.redis = 'localhost:9736'
 
 
 ##
@@ -108,4 +108,8 @@ class BadJobWithSyntaxError
   def self.perform
     raise SyntaxError, "Extra Bad job!"
   end
+end
+
+class TimeStamped < GoodJob
+  @queue = :time__ts
 end

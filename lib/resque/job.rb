@@ -51,7 +51,7 @@ module Resque
       Resque.push(queue, :class => klass.to_s, :args => args)
     end
     
-    def self.create_timestamped(queue, klass, time, *args)
+    def self.create_timestamped(queue, time, klass, *args)
       if !queue
         raise NoQueueError.new("Jobs must be placed onto a queue.")
       end
@@ -97,7 +97,7 @@ module Resque
       destroyed = 0
       
       if queue_is_timestamped?(queue)
-        jobs = redis.zrangebyscore(queue, 0, Time.now.to_i)
+        jobs = redis.zrange(queue, 0, -1)
       else
         jobs = redis.lrange(queue, 0, -1)
       end
@@ -110,7 +110,7 @@ module Resque
 
         if match
           if queue_is_timestamped?(queue)
-            destroyed += redis.zrem(queue, string).to_i
+            destroyed += redis.zrem(queue, string) ? 1 : 0
           else
             destroyed += redis.lrem(queue, 0, string).to_i
           end

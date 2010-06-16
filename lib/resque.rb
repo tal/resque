@@ -119,10 +119,9 @@ module Resque
   def push(queue, item)
     watch_queue(queue)
     queue = "queue:#{queue}"
-    
     if queue_is_timestamped?(queue)
       raise NoTimeError.new('Time is required to push to a timestamped queue') unless item[:timestamp]
-      redis.zadd queue, item[:timestamp].to_i, encode(item)
+      redis.zadd queue, item.delete(:timestamp).to_i, encode(item)
     else
       redis.rpush queue, encode(item)
     end
@@ -134,7 +133,12 @@ module Resque
   def pop(queue)
     queue = "queue:#{queue}"
     if queue_is_timestamped?(queue)
-      decode redis.zrangebyscore queue, 0, Time.now.to_i, :limit => [0,1]
+      item = redis.zrangebyscore(queue, 0, Time.now.to_i, :limit => [0,1])
+      if item
+        item = item.first
+        redis.zrem(queue,item)
+      end
+      decode item
     else
       decode redis.lpop(queue)
     end
@@ -143,10 +147,12 @@ module Resque
   # Returns an integer representing the size of a queue.
   # Queue name should be a string.
   def size(queue)
+    queue = "queue:#{queue}"
+    
     if queue_is_timestamped?(queue)
-      redis.zcard("queue:#{queue}").to_i
+      redis.zcard(queue).to_i
     else
-      redis.llen("queue:#{queue}").to_i
+      redis.llen(queue).to_i
     end
   end
 
@@ -218,8 +224,8 @@ module Resque
     Job.create(queue_from_class(klass), klass, *args)
   end
   
-  def run_at(klass, time, *args)
-    Job.create_timestamped(queue_from_class(klass), klass, time, *args)
+  def run_at(time, klass, *args)
+    Job.create_timestamped(queue_from_class(klass), time, klass, *args)
   end
 
   # This method can be used to conveniently remove a job from a queue.
