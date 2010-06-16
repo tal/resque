@@ -61,7 +61,7 @@ module Resque
     end
     
     def queue_is_timestamped? queue
-      queue =~ /.+__ts$/i
+      queue.to_s =~ /.+__ts$/i
     end
     
   end
