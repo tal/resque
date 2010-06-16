@@ -10,11 +10,17 @@
   <table class='jobs'>
     <tr>
       <th>Class</th>
+      <% if queue_is_timestamped?(queue) %>
+      <th>Time To Run</th>
+      <% end %>
       <th>Args</th>
     </tr>
     <% for job in (jobs = resque.peek(queue, start, 20)) %>
     <tr>
       <td class='class'><%= job['class'] %></td>
+      <% if queue_is_timestamped?(queue) %>
+      <td class="run-at"><%= job['run_at'].strftime('%m/%d %I:%M:%S%p') if job['run_at'] %></th>
+      <% end %>
       <td class='args'><%=h job['args'].inspect %></td>
     </tr>
     <% end %>

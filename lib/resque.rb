@@ -120,8 +120,8 @@ module Resque
     watch_queue(queue)
     queue = "queue:#{queue}"
     if queue_is_timestamped?(queue)
-      raise NoTimeError.new('Time is required to push to a timestamped queue') unless item[:timestamp]
-      redis.zadd queue, item.delete(:timestamp).to_i, encode(item)
+      raise NoTimeError.new('Time is required to push to a timestamped queue') unless item[:run_at]
+      redis.zadd queue, item.delete(:run_at).to_i, encode(item)
     else
       redis.rpush queue, encode(item)
     end
@@ -172,7 +172,12 @@ module Resque
   # and converting them into Ruby objects.
   def list_range(key, start = 0, count = 1)
     if queue_is_timestamped?(key)
-      items = redis.zrange(key,start,count).collect {|item| decode(item)}
+      items = []
+      redis.zrange(key,start,start+count-1,:with_scores => true).each_slice(2) do |item|
+        i = decode(item[0])
+        i['run_at'] = Time.at(item[1].to_i)
+        items << i
+      end
       count == 1 ? items.first : items
     else
       if count == 1

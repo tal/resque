@@ -64,7 +64,7 @@ module Resque
         raise NoTimeError.new('Timed Jobs must be given a time')
       end
 
-      Resque.push(queue, :class => klass.to_s, :args => args, :timestamp => time)
+      Resque.push(queue, :class => klass.to_s, :args => args, :run_at => time)
     end
 
     # Removes a job from a queue. Expects a string queue name, a
