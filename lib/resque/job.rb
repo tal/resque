@@ -59,10 +59,6 @@ module Resque
       if klass.to_s.empty?
         raise NoClassError.new("Jobs must be given a class.")
       end
-      
-      if !time
-        raise NoTimeError.new('Timed Jobs must be given a time')
-      end
 
       Resque.push(queue, :class => klass.to_s, :args => args, :run_at => time)
     end
