@@ -7,13 +7,14 @@
     <input type='submit' name='' value='Remove Queue' />
   </form>
   <p class='sub'>Showing <%= start = params[:start].to_i %> to <%= start + 20 %> of <b><%=size = resque.size(queue)%></b> jobs</p>
-  <table class='jobs'>
+  <table class='jobs<%= ' ts' if queue_is_timestamped?(queue) %>'>
     <tr>
       <th>Class</th>
       <% if queue_is_timestamped?(queue) %>
       <th>Time To Run</th>
       <% end %>
       <th>Args</th>
+      <th>Remove</th>
     </tr>
     <% for job in (jobs = resque.peek(queue, start, 20)) %>
     <tr>
@@ -22,6 +23,13 @@
       <td class="run-at"><%= job['run_at'].strftime('%m/%d %I:%M:%S%p') if job['run_at'] %></th>
       <% end %>
       <td class='args'><%=h job['args'].inspect %></td>
+      <td class="remove">
+        <form action="<%=u "/queues/#{queue}/remove_job "%>" method="post" accept-charset="utf-8">
+          <input type="hidden" name="class" value="<%= job['class'] %>">
+          <input type="hidden" name="args" value="<%=h encode(job['args']) %>">
+          <input type="submit" class="submit" value="x">
+        </form>
+      </td>
     </tr>
     <% end %>
     <% if jobs.empty? %>

@@ -14,6 +14,8 @@ module Resque
     helpers do
       include Rack::Utils
       alias_method :h, :escape_html
+      
+      include Resque::Helpers
 
       def current_section
         url request.path_info.sub('/','').split('/')[0].downcase
@@ -99,7 +101,7 @@ module Resque
         end
         "<p class='poll'>#{text}</p>"
       end
-
+      
     end
 
     def show(page, layout = true)
@@ -128,6 +130,11 @@ module Resque
     post "/queues/:id/remove" do
       Resque.remove_queue(params[:id])
       redirect u('queues')
+    end
+    
+    post "/queues/:id/remove_job" do
+      removed = Resque::Job.destroy(params[:id], params[:class], *decode(params[:args]))
+      redirect u("queues/#{params[:id]}?message=#{escape("#{removed} jobs removed")}")
     end
 
     %w( overview workers ).each do |page|
