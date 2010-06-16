@@ -55,7 +55,11 @@ module Resque
       if !queue
         raise NoQueueError.new("Jobs must be placed onto a queue.")
       end
-
+      
+      unless queue_is_timestamped?(queue)
+        raise WrongQueueType.new('Timed jobs must be placed into a queue with the suffix __ts')
+      end
+      
       if klass.to_s.empty?
         raise NoClassError.new("Jobs must be given a class.")
       end

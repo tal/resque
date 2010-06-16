@@ -8,6 +8,9 @@ module Resque
   # Raised when trying to create a timed job without a time
   class NoTimeError < RuntimeError; end
   
+  # Raised when trying to create a timed job on a normal queue
+  class WrongQueueType < RuntimeError; end
+  
   # Raised when a worker was killed while processing a job.
   class DirtyExit < RuntimeError; end
 end
