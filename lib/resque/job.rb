@@ -51,6 +51,9 @@ module Resque
       Resque.push(queue, :class => klass.to_s, :args => args)
     end
     
+    # Works exactly like create but accepts a time object as the second
+    # argument. The queue must have the suffix **__ts** (note the TWO
+    # underscores) in order to work.
     def self.create_timestamped(queue, time, klass, *args)
       if !queue
         raise NoQueueError.new("Jobs must be placed onto a queue.")

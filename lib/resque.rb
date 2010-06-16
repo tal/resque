@@ -229,6 +229,16 @@ module Resque
     Job.create(queue_from_class(klass), klass, *args)
   end
   
+  
+  # This method acts exactly like enqueue except the first argument is a Time object.
+  #
+  # The associated queue must have the suffix of **__ts**(note TWO underscores):
+  # eg. *:my_timed_queue__ts*
+  # 
+  # Timed queues only currently support running the same argument set once for a specific
+  # time. Delay by at least one second in order to have the same argument set run twice.
+  # 
+  # Null value for time will run immediately.
   def run_at(time, klass, *args)
     Job.create_timestamped(queue_from_class(klass), time, klass, *args)
   end
